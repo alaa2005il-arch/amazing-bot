@@ -9,7 +9,7 @@ from threading import Thread
 try:
     from phrases import BSF_PHRASES
 except:
-    BSF_PHRASES = ["BSF بزعامة عجيب وابو عيسى 👑🔥💣"]
+    BSF_PHRASES = ["BSF زعامة عجيب وابو عيسى 👑"]
 
 load_dotenv()
 
@@ -20,13 +20,15 @@ def home():
     return "BSF BOT شغال 👑🔥"
 
 def run():
-    app.run(host='0.0.0.0', port=8080)
+    # Render بطلب البورت من متغير PORT
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
 
 def keep_alive():
     t = Thread(target=run)
     t.start()
 
-TRIGGER = ["BSF", "بزعامة", "عجيب", "ابو عيسى", "bsf", "BSf"]
+TRIGGER = ["BSF", "بزعامة", "عجيب", "ابو عيسى", "bsf"]
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -35,7 +37,7 @@ client = discord.Client(intents=intents)
 @client.event
 async def on_ready():
     print(f'✅ BSF LIVE: {client.user}')
-    await client.change_presence(activity=discord.Game(name="BSF KINGDOM 👑"))
+    await client.change_presence(activity=discord.Game(name="BSF زعامة 👑"))
 
 @client.event
 async def on_message(message):
@@ -47,4 +49,5 @@ async def on_message(message):
         await message.channel.send(response)
 
 keep_alive()
-client.run(os.getenv("DISCORD_TOKEN"))
+
+# يقرأ التوكن من DISCORD_TOKEN أو BOT_TOKEN - الث
