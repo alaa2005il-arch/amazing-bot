@@ -1,5 +1,6 @@
 import os
 import random
+import asyncio
 import threading
 from flask import Flask
 import discord
@@ -50,6 +51,15 @@ async def on_message(message):
         await message.channel.send(random.choice(PHRASES))
     await bot.process_commands(message)
 
+def get_audio_url(query):
+    with yt_dlp.YoutubeDL(YTDL_OPTIONS) as ydl:
+        search = ydl.extract_info(f"ytsearch1:{query}", download=False)
+        if not search['entries']:
+            return None, None
+        video = search['entries'][0]
+        info = ydl.extract_info(video['webpage_url'], download=False)
+        return info['url'], info.get('title', query)
+
 @bot.command(name="موسى")
 async def musa_ai(ctx, *, سوال: str = None):
     if not سوال:
@@ -57,10 +67,11 @@ async def musa_ai(ctx, *, سوال: str = None):
         return
     async with ctx.typing():
         try:
-            رد = ai_client.chat.completions.create(
+            loop = asyncio.get_event_loop()
+            رد = await loop.run_in_executor(None, lambda: ai_client.chat.completions.create(
                 model="google/gemini-flash-1.5-8b:free",
                 messages=[{"role": "system", "content": AI_SYSTEM},{"role": "user", "content": سوال}]
-            )
+            ))
             await ctx.send(رد.choices[0].message.content[:2000])
         except Exception as e:
             print(f"AI Error: {e}")
@@ -81,20 +92,14 @@ async def play_song(ctx, *, query: str = None):
 
     async with ctx.typing():
         try:
-            with yt_dlp.YoutubeDL(YTDL_OPTIONS) as ydl:
-                # اول شي نبحث
-                search = ydl.extract_info(f"ytsearch1:{query}", download=False)
-                if not search['entries']:
-                    return await ctx.send("ما لقيت الاغنية")
-                video = search['entries'][0]
-                video_url = video['webpage_url']
-                # تاني شي نجيب رابط الصوت المباشر
-                info = ydl.extract_info(video_url, download=False)
-                url = info['url']
-                title = info.get('title', query)
+            loop = asyncio.get_event_loop()
+            url, title = await loop.run_in_executor(None, lambda: get_audio_url(query))
+
+            if not url:
+                return await ctx.send("ما لقيت الاغنية")
 
             source = FFmpegPCMAudio(url, **FFMPEG_OPTIONS)
-            ctx.voice_client.play(source)
+            ctx.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
             await ctx.send(f"🎶 **بشغل هسا:** {title}")
         except Exception as e:
             print(f"Play Error: {e}")
