@@ -1,71 +1,33 @@
+import discord
+from discord.ext import commands
 import os
-import json
-import requests
+from game import load_data, save_data
 
-UPSTASH_URL = os.getenv("UPSTASH_REDIS_REST_URL", "").strip().strip('"')
-UPSTASH_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN", "").strip().strip('"')
+data = load_data()
 
-def upstash_command(*args):
-    if not UPSTASH_URL or not UPSTASH_TOKEN:
-        print("⚠️ Upstash URL/TOKEN missing", flush=True)
-        return None
-    try:
-        # Upstash REST API expects JSON array: ["GET", "key"] etc
-        res = requests.post(
-            UPSTASH_URL,
-            headers={"Authorization": f"Bearer {UPSTASH_TOKEN}"},
-            json=list(args),
-            timeout=8
-        )
-        data = res.json()
-        if "result" in data:
-            return data["result"]
-        else:
-            print(f"Upstash error: {data}", flush=True)
-            return None
-    except Exception as e:
-        print(f"Upstash exception: {e}", flush=True)
-        return None
+intents = discord.Intents.default()
+intents.members = True
+intents.message_content = True
 
-def load_data():
-    """يحمل الداتا من Upstash Frankfurt - للأبد"""
-    print("📥 Loading data from Upstash...", flush=True)
-    result = upstash_command("GET", "bsf_data")
-    if result:
-        try:
-            loaded = json.loads(result)
-            print(f"✅ Loaded {len(loaded)} users from Upstash", flush=True)
-            return loaded
-        except Exception as e:
-            print(f"❌ JSON parse error: {e}", flush=True)
-            return {}
-    else:
-        print("ℹ️ No data in Upstash yet, starting empty", flush=True)
-        # جرب يحمل من الملف المحلي القديم كـ backup مرة وحدة
-        try:
-            if os.path.exists("bsf_data.json"):
-                with open("bsf_data.json", "r", encoding="utf-8") as f:
-                    old = json.load(f)
-                    print(f"📂 Found old local file with {len(old)} users, migrating to Upstash...", flush=True)
-                    save_data(old)
-                    return old
-        except:
-            pass
-        return {}
+bot = commands.Bot(command_prefix="!", intents=intents)
 
-def save_data(data):
-    """يحفظ الداتا في Upstash للأبد + ملف محلي مؤقت"""
-    try:
-        json_str = json.dumps(data, ensure_ascii=False)
-        # احفظ في Upstash
-        upstash_command("SET", "bsf_data", json_str)
-        print(f"💾 Saved {len(data)} users to Upstash", flush=True)
-    except Exception as e:
-        print(f"❌ Upstash save failed: {e}", flush=True)
+@bot.event
+async def on_ready():
+    print(f"Bot ready: {bot.user}")
+    await bot.tree.sync()
+    print("Commands synced!")
 
-    # احتياط محلي عشان Render ما يزعل
-    try:
-        with open("bsf_data.json", "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-    except:
-        pass
+@bot.tree.command(name="دود", description="دودة مشعة +3 ذهب")
+async def dod(interaction: discord.Interaction):
+    user_id = str(interaction.user.id)
+    if user_id not in data:
+        data[user_id] = {"gold": 0, "xp": 0}
+    data[user_id]["gold"] += 3
+    data[user_id]["xp"] += 56
+    save_data(data)
+    
+    embed = discord.Embed(title="مكان رطب ومظلم", description=f"✨ دودة مشعة x1\n💰 +3 ذهب\n🪱 مجموع الدود: 28\n⭐ لفل: 1 | XP: 56", color=0x00ff00)
+    embed.set_footer(text="Upstash Frankfurt | B.S.F ABO ISSA محظوظ لي")
+    await interaction.response.send_message(embed=embed)
+
+bot.run(os.getenv("DISCORD_TOKEN"))
