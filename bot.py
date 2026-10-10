@@ -4,6 +4,7 @@ import os
 from flask import Flask
 from threading import Thread
 
+# --- Flask keep alive لـ Render ---
 app = Flask('')
 
 @app.route('/')
@@ -17,6 +18,7 @@ def keep_alive():
     t = Thread(target=run)
     t.start()
 
+# --- Discord Bot ---
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
@@ -44,9 +46,18 @@ bot.setup_hook = setup_hook
 
 keep_alive()
 
-TOKEN = os.getenv("TOKEN")
+# --- قراءة التوكن - يقبل اي اسم عندك في رندر ---
+TOKEN = (
+    os.getenv("TOKEN") or 
+    os.getenv("DISCORD_TOKEN") or 
+    os.getenv("DISCORD_BOT_TOKEN") or
+    os.getenv("BOT_TOKEN")
+)
+
+print(f"Checking envs... TOKEN={bool(os.getenv('TOKEN'))} DISCORD_TOKEN={bool(os.getenv('DISCORD_TOKEN'))}", flush=True)
 print(f"TOKEN exists: {bool(TOKEN)}", flush=True)
+
 if not TOKEN:
-    print("❌ TOKEN NOT FOUND IN RENDER ENV!", flush=True)
+    print("❌ TOKEN not found in ENV! حط TOKEN او DISCORD_TOKEN في Environment", flush=True)
 else:
     bot.run(TOKEN)
