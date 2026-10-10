@@ -21,7 +21,6 @@ async def on_ready():
     except Exception as e:
         print(f"❌ خطأ تحميل اللعبة: {e}")
 
-# شغل البوت
 TOKEN = os.getenv("DISCORD_TOKEN")
 if not TOKEN:
     print("❌ ما لقيت DISCORD_TOKEN")
