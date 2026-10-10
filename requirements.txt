@@ -1,5 +1,2 @@
 discord.py
-openai
-flask
-yt-dlp
-PyNaCl
+Flask
