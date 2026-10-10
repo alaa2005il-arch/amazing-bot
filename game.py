@@ -1,95 +1,95 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+from discord.ui import View, Button
 import random
 import json
 import os
 
 DATA_FILE = "bsf_data.json"
+
+ROOMS = [
+    {"id": 0, "name": "Fungal Grotto 🍄", "desc": "البداية - رائحة الفطر في كل مكان", "emoji": "🍄"},
+    {"id": 1, "name": "Mossy Burrow 🌿", "desc": "جحر الطحالب - طريق زلق وآمن", "emoji": "🌿"},
+    {"id": 2, "name": "Crystal Cavern 💎", "desc": "كهف الكريستال - النص، الدودات بتلمع هون", "emoji": "💎"},
+    {"id": 3, "name": "Egg Chamber 🥚", "desc": "غرفة البيض - الدودة الأم بتحرس", "emoji": "🥚"},
+    {"id": 4, "name": "Treasure Nook 👑", "desc": "كنز الزعامة! وصلت للنهاية", "emoji": "👑"},
+]
+
 def load_data():
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except: return {}
+        except:
+            return {}
     return {}
 
 def save_data(data):
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-# --- عالم الدود ---
-ROOMS = [
-    {"name": "Fungal Grotto 🍄", "desc": "كهف الفطر المضيء - البداية", "color": 0x8B4513},
-    {"name": "Mossy Burrow 🌿", "desc": "جحر الطحالب الرطب والزحليطة", "color": 0x228B22},
-    {"name": "Crystal Cavern 💎", "desc": "كهف الكريستال - نص الطريق!", "color": 0x00CED1},
-    {"name": "Egg Chamber 🥚", "desc": "غرفة بيض الدودة الأم... خطر!", "color": 0xFFD700},
-    {"name": "Treasure Nook 👑", "desc": "كنز الدود الأسطوري! انت فزت!", "color": 0xFF1493},
-]
+def get_user(data, user_id, name):
+    uid = str(user_id)
+    if uid not in data:
+        data[uid] = {"hearts": 0, "name": name, "worm_room": 0, "worms": 0}
+    # لضمان التوافق مع البيانات القديمة
+    data[uid].setdefault("worm_room", 0)
+    data[uid].setdefault("worms", 0)
+    data[uid].setdefault("hearts", 0)
+    data[uid]["name"] = name
+    return data[uid]
 
 PHRASES = [
     "BSF زعامة للأبد 🔥",
     "عجيب وابو عيسى الزعماء الحقيقيين 👑",
-    "جمعت قلب جديد! ❤️",
-    "الدودة بتتطلع عليك... 🐛",
+    "الدودة جمعت قوة جديدة! 🐛",
 ]
 
-class WormView(discord.ui.View):
-    def __init__(self, user_id):
-        super().__init__(timeout=300)
-        self.user_id = user_id
+LORE = [
+    "سمعت همس الدودة الأم: 'استمر يا صغيري...'",
+    "فطر غريب اضاء طريقك فجأة ✨",
+    "أثر دودة قديمة... كانت هنا قبلك",
+]
 
-    def get_embed(self):
-        data = load_data()
-        u = data.get(str(self.user_id), {})
-        room_idx = u.get("worm_room", 0)
-        room_idx = min(room_idx, len(ROOMS)-1)
-        room = ROOMS[room_idx]
-
-        embed = discord.Embed(
-            title=f"🐛 {room['name']} [{room_idx+1}/{len(ROOMS)}]",
-            description=f"{room['desc']}\n\n**دوداتك:** {u.get('worms',0)} 🐛\n**قلوبك:** {u.get('hearts',0)} ❤️",
-            color=room['color']
-        )
-        embed.set_footer(text=f"مغامرة الدودة - BSF | يحرسها عجيب وابو عيسى")
-        # هون بتحط صورك بعدين: embed.set_image(url="...")
-        return embed
+class WormView(View):
+    def __init__(self):
+        super().__init__(timeout=120)
 
     @discord.ui.button(label="استكشاف ⬆️", style=discord.ButtonStyle.green, emoji="🐛")
-    async def explore(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id!= self.user_id:
-            await interaction.response.send_message("مش مغامرتك! اكتب /لعبة لتبدأ انت.", ephemeral=True)
-            return
-
+    async def explore(self, interaction: discord.Interaction, button: Button):
         data = load_data()
-        uid = str(self.user_id)
-        if uid not in data: data[uid] = {"hearts":0, "worm_room":0, "worms":0, "name": interaction.user.name}
-        if "worm_room" not in data[uid]: data[uid]["worm_room"]=0
-        if "worms" not in data[uid]: data[uid]["worms"]=0
+        user = get_user(data, interaction.user.id, interaction.user.name)
 
         # حدث عشوائي 20%
+        event_text = ""
         if random.random() < 0.2:
-            event = random.choice(["double", "poison", "lore"])
+            event = random.choice(["double", "back", "lore"])
             if event == "double":
-                data[uid]["worms"] += 2
-                msg = "💥 لقيت عش دود! **+2 دودة!**"
-            elif event == "poison":
-                data[uid]["worm_room"] = max(0, data[uid]["worm_room"]-1)
-                msg = "🍄 أكلت فطر سام! رجعت غرفة لورا 😵‍💫"
+                user["worms"] += 2
+                user["worm_room"] = min(4, user["worm_room"] + 1)
+                event_text = "\n✨ **حدث نادر!** لقيت دودتين مرة وحدة! ❤️❤️"
+            elif event == "back":
+                user["worm_room"] = max(0, user["worm_room"] - 1)
+                event_text = "\n🍄 **فطر سام!** رجعتك خطوة لورا!"
             else:
-                msg = "👁️ همس الأم: `الكنز مش ذهب... الكنز هو الرحلة`"
+                event_text = f"\n📜 {random.choice(LORE)}"
         else:
-            data[uid]["worms"] += 1
-            data[uid]["worm_room"] += 1
-            msg = f"🐛 زحفت للأمام! +1 دودة"
+            user["worms"] += 1
+            user["worm_room"] = min(4, user["worm_room"] + 1)
 
         save_data(data)
+        room = ROOMS[user["worm_room"]]
 
-        # فوز؟
-        if data[uid]["worm_room"] >= len(ROOMS)-1:
-            data[uid]["worm_room"] = len(ROOMS)-1
-            save_data(data)
-            embed = self.get_embed()
-            embed.title = "🏆 وصلت للكنز! 👑"
-            embed.description = f"**{msg}**\n\n{embed.description}\n\n**مبروك! ختمت الخريطة! اكتب /لعبة عشان تعيد من الأول**"
-            data[uid]["worm_room"] =
+        if room["id"] == 4:
+            embed = discord.Embed(
+                title=f"{room['name']} - فزت!",
+                description=f"{interaction.user.mention} وصل لكنز الزعامة! 👑\n\nجمعت **{user['worms']}** دودة في الرحلة!\n{event_text}\n\nاكتب `/زعامة` لتشوف الترتيب",
+                color=discord.Color.gold()
+            )
+            embed.set_footer(text="BSF Worm World - النهاية")
+            await interaction.response.edit_message(embed=embed, view=None)
+        else:
+            embed = discord.Embed(
+                title=f"{room['emoji']} {room['name']}",
+                description=f"{room['desc']}\n\n**الدودات:** 🐛 {user['worms']}\n**
