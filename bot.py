@@ -1,78 +1,71 @@
-import discord
-from discord.ext import commands
 import os
-import sys
-from flask import Flask
-from threading import Thread
+import json
+import requests
 
-# --- Flask للـ Render ---
-app = Flask('')
+UPSTASH_URL = os.getenv("UPSTASH_REDIS_REST_URL", "").strip().strip('"')
+UPSTASH_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN", "").strip().strip('"')
 
-@app.route('/')
-def home():
-    return "BSF Bot is Live! 🐛"
-
-def run_flask():
-    port = int(os.environ.get("PORT", 10000))
-    print(f"🌐 Flask starting on 0.0.0.0:{port}", flush=True)
-    app.run(host='0.0.0.0', port=port)
-
-def keep_alive():
-    t = Thread(target=run_flask)
-    t.daemon = True
-    t.start()
-
-# --- Bot ---
-class BSF_Bot(commands.Bot):
-    def __init__(self):
-        intents = discord.Intents.default()
-        intents.message_content = True
-        intents.members = True
-        super().__init__(command_prefix="!", intents=intents)
-
-    async def setup_hook(self):
-        print("🔄 Loading cogs...", flush=True)
-        try:
-            await self.load_extension("game")
-            print("✅ game.py loaded!", flush=True)
-        except Exception as e:
-            print(f"❌ Failed to load game.py: {e}", flush=True)
-            import traceback
-            traceback.print_exc()
-
-        try:
-            synced = await self.tree.sync()
-            print(f"✅ Synced {len(synced)} commands", flush=True)
-        except Exception as e:
-            print(f"❌ Sync failed: {e}", flush=True)
-
-bot = BSF_Bot()
-
-@bot.event
-async def on_ready():
-    print(f"✅ BSF LIVE as {bot.user}", flush=True)
-
-# شغل الفلاسك أول شي
-keep_alive()
-
-# جيب التوكن
-TOKEN = os.getenv("TOKEN") or os.getenv("DISCORD_TOKEN") or os.getenv("DISCORD_BOT_TOKEN") or os.getenv("BOT_TOKEN")
-
-if not TOKEN:
-    print("❌ NO TOKEN FOUND! Bot will not start but Flask will stay alive to keep Render happy", flush=True)
-    # خلي الفلاسك شغال عشان رندر ما يعطي Failed
-    import time
-    while True:
-        time.sleep(3600)
-else:
-    print("🚀 Starting Discord bot...", flush=True)
+def upstash_command(*args):
+    if not UPSTASH_URL or not UPSTASH_TOKEN:
+        print("⚠️ Upstash URL/TOKEN missing", flush=True)
+        return None
     try:
-        bot.run(TOKEN)
+        # Upstash REST API expects JSON array: ["GET", "key"] etc
+        res = requests.post(
+            UPSTASH_URL,
+            headers={"Authorization": f"Bearer {UPSTASH_TOKEN}"},
+            json=list(args),
+            timeout=8
+        )
+        data = res.json()
+        if "result" in data:
+            return data["result"]
+        else:
+            print(f"Upstash error: {data}", flush=True)
+            return None
     except Exception as e:
-        print(f"❌ Bot crashed: {e}", flush=True)
-        import traceback
-        traceback.print_exc()
-        # حتى لو البوت وقع، خلي الفلاسك شغال
-        import time
-        while True:
-            time.sleep(3600)
+        print(f"Upstash exception: {e}", flush=True)
+        return None
+
+def load_data():
+    """يحمل الداتا من Upstash Frankfurt - للأبد"""
+    print("📥 Loading data from Upstash...", flush=True)
+    result = upstash_command("GET", "bsf_data")
+    if result:
+        try:
+            loaded = json.loads(result)
+            print(f"✅ Loaded {len(loaded)} users from Upstash", flush=True)
+            return loaded
+        except Exception as e:
+            print(f"❌ JSON parse error: {e}", flush=True)
+            return {}
+    else:
+        print("ℹ️ No data in Upstash yet, starting empty", flush=True)
+        # جرب يحمل من الملف المحلي القديم كـ backup مرة وحدة
+        try:
+            if os.path.exists("bsf_data.json"):
+                with open("bsf_data.json", "r", encoding="utf-8") as f:
+                    old = json.load(f)
+                    print(f"📂 Found old local file with {len(old)} users, migrating to Upstash...", flush=True)
+                    save_data(old)
+                    return old
+        except:
+            pass
+        return {}
+
+def save_data(data):
+    """يحفظ الداتا في Upstash للأبد + ملف محلي مؤقت"""
+    try:
+        json_str = json.dumps(data, ensure_ascii=False)
+        # احفظ في Upstash
+        upstash_command("SET", "bsf_data", json_str)
+        print(f"💾 Saved {len(data)} users to Upstash", flush=True)
+    except Exception as e:
+        print(f"❌ Upstash save failed: {e}", flush=True)
+
+    # احتياط محلي عشان Render ما يزعل
+    try:
+        with open("bsf_data.json", "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except:
+        pass
