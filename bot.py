@@ -43,6 +43,14 @@ async def on_ready():
     print(f"✅ BSF LIVE: {bot.user}")
 
 @bot.event
+async def setup_hook():
+    try:
+        await bot.load_extension("game")
+        print("✅ Game loaded!")
+    except Exception as e:
+        print(f"Game Error: {e}")
+
+@bot.event
 async def on_message(message):
     if message.author == bot.user:
         return
