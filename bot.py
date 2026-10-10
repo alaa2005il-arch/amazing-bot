@@ -12,9 +12,12 @@ async def on_ready():
     print(f"✅ البوت شغال: {bot.user}")
     try:
         await bot.load_extension("game")
+        print("✅ لعبة الدود شغالة")
+        await bot.load_extension("baharat")
+        print("✅ لعبة بهاراتك شغالة")
         synced = await bot.tree.sync()
         print(f"✅ تم مزامنة {len(synced)} أمر")
-        print(f"✅ ملك الألعاب جاهز - بهارتك يا موشي!")
+        print(f"✅ البوت الخارق جاهز - دود + بهارات - بهارتك يا موشي!")
     except Exception as e:
         print(f"❌ خطأ تحميل اللعبة: {e}")
 
