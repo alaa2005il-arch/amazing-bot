@@ -1,13 +1,14 @@
-import discord
-from discord.ext import commands
+import 【entity-discord¦canonical_name=discord】
+from 【entity-discord¦canonical_name=discord】.ext import commands
 import os
+import random
 
 # إعدادات BSF
-intents = discord.Intents.default()
+intents = 【entity-discord¦canonical_name=discord】.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="::", intents=intents)
 
-# عبارات BSF
+# عبارات BSF - الزعامة
 BSF_PHRASES = [
     "👑 الزعيم المؤسس ابو عيسى أخو عجيب",
     "😴 معدن بضل أخوي حتى واحنا نايمين",
@@ -18,19 +19,14 @@ BSF_PHRASES = [
 @bot.event
 async def on_ready():
     print(f"🔥 BSF اشتغل! {bot.user}")
-    print("الزعيم المؤسس ابو عيسى أخو عجيب")
-    # حمل كل الألعاب
-    for file in ["worm", "quiz", "music", "ai"]:
-        try:
-            await bot.load_extension(file)
-            print(f"✅ {file} شغال")
-        except Exception as e:
-            print(f"❌ {file}: {e}")
+    print("الزعيم المؤسس ابو عيسى أخو عجيب - فك التعليق!")
 
 @bot.command(name="بي")
 async def bee(ctx):
-    await ctx.send(f"🐝 هلا والله! بوت بي شغال!\n{__import__('random').choice(BSF_PHRASES)}")
+    await ctx.send(f"🐝 بوت بي فك التعليق وشغال!\n{random.choice(BSF_PHRASES)}")
 
-# شغل البوت
-TOKEN = os.getenv("TOKEN")
-bot.run(TOKEN)
+@bot.command(name="عيلة")
+async def family(ctx):
+    await ctx.send("👑 العيلة: عجيب + أخوه الزعيم المؤسس ابو عيسى + موسى + موشي + معدن + اندي معدن = BSF للأبد")
+
+bot.run(os.getenv("TOKEN"))
