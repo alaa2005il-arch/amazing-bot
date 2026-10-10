@@ -1,4 +1,7 @@
-discord.py
+
+discord.py>=2.3.0
 Flask
-Pillow
 requests
+yt-dlp
+PyNaCl
+aiohttp
