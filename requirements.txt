@@ -1,7 +1,7 @@
-
 discord.py>=2.3.0
 Flask
 requests
 yt-dlp
 PyNaCl
 aiohttp
+openai
