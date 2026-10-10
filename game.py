@@ -1,4 +1,4 @@
-import os, json, random, traceback, discord
+import os, json, random, traceback, discord, asyncio
 from discord.ext import commands
 from discord import app_commands
 from flask import Flask
@@ -7,6 +7,7 @@ import requests
 
 UPSTASH_URL = os.getenv("UPSTASH_REDIS_REST_URL", "").strip().strip('"').strip("'")
 UPSTASH_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN", "").strip().strip('"').strip("'")
+AI_KEY = os.getenv("OPENAI_API_KEY", "") or os.getenv("GROQ_API_KEY", "")
 
 def upstash_command(*args):
     if not UPSTASH_URL or not UPSTASH_TOKEN: return None
@@ -39,26 +40,66 @@ def get_user(uid):
         save_data(data)
     return data[uid], data
 
-# ==== رتب ابو عيسى VIP ====
 VIP_USERS = {
-    # تقدر تضيف ايدي الديسكورد هون - هلا شغال على الاسم
     "ابو عيسى": {"title": "👑 المؤسس", "color": 0xFF0000},
     "عيسى": {"title": "👑 المؤسس", "color": 0xFF0000},
     "موشي": {"title": "⚙️ المطور", "color": 0x00FF00},
     "موسى": {"title": "⚙️ المطور", "color": 0x00FF00},
     "عجيب": {"title": "🔥 عجيب BSF", "color": 0xFFD700},
 }
-
 def get_vip_info(display_name):
     name_lower = display_name.lower()
     for key, info in VIP_USERS.items():
-        if key.lower() in name_lower:
-            return info
+        if key.lower() in name_lower: return info
     return None
+
+def ask_musa_ai(question):
+    if AI_KEY:
+        try:
+            url = "https://api.groq.com/openai/v1/chat/completions" if "gsk_" in AI_KEY else "https://api.openai.com/v1/chat/completions"
+            headers = {"Authorization": f"Bearer {AI_KEY}", "Content-Type": "application/json"}
+            data = {
+                "model": "llama-3.1-8b-instant" if "gsk_" in AI_KEY else "gpt-4o-mini",
+                "messages": [
+                    {"role": "system", "content": "انت موسى، مساعد ذكي في سيرفر BSF، بتحكي فلسطيني عامي مضحك، بتحب الدود والاغاني، وبتجاوب باختصار وبطريقة عجيبة."},
+                    {"role": "user", "content": question}
+                ],
+                "max_tokens": 300
+            }
+            r = requests.post(url, headers=headers, json=data, timeout=15)
+            if r.status_code == 200: return r.json()["choices"][0]["message"]["content"]
+        except Exception as e: print(f"AI Error: {e}")
+    funny = [
+        f"يا زلمة '{question}'؟ هاد بدو قعدة مع دودة ذهبية 👑",
+        f"موسى بقول: '{question}'؟ اسال ابو عيسى هو بعرف 👑",
+        f"'{question}' - روح شغل اغنية وانت بتحفر /دود 🪱🎵",
+    ]
+    return random.choice(funny)
+
+# ===== اغاني =====
+music_queues = {}  # guild_id -> list
+
+def get_queue(guild_id):
+    if guild_id not in music_queues: music_queues[guild_id] = []
+    return music_queues[guild_id]
+
+async def search_youtube(query):
+    try:
+        import yt_dlp
+        ydl_opts = {'format': 'bestaudio', 'quiet': True, 'noplaylist': True, 'default_search': 'ytsearch1'}
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(f"ytsearch1:{query}", download=False)
+            if 'entries' in info and info['entries']:
+                v = info['entries'][0]
+                return {'title': v.get('title'), 'url': v.get('webpage_url'), 'duration': v.get('duration'), 'thumbnail': v.get('thumbnail')}
+    except Exception as e:
+        print(f"YT Error: {e}")
+    # fallback search link
+    return {'title': query, 'url': f"https://www.youtube.com/results?search_query={query.replace(' ', '+')}", 'duration': 0, 'thumbnail': None}
 
 app = Flask('')
 @app.route('/')
-def home(): return "BSF BOT Online ♾️ VIP ابو عيسى"
+def home(): return "BSF BOT Online ♾️ DOD + AI + MUSIC"
 def run_flask(): app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 10000)))
 def keep_alive(): Thread(target=run_flask, daemon=True).start()
 
@@ -79,11 +120,12 @@ WORM_TYPES = [
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
+intents.voice_states = True
 bot = commands.Bot(command_prefix='!', intents=intents, help_command=None)
 
 @bot.event
 async def on_ready():
-    print(f'{bot.user} - BSF VIP READY ابو عيسى')
+    print(f'{bot.user} - BSF FULL READY (DOD+AI+MUSIC)')
     try: await bot.tree.sync()
     except: pass
 
@@ -98,6 +140,7 @@ async def on_app_command_error(interaction: discord.Interaction, error):
             await interaction.followup.send(f"❌ ايرور: {error}", ephemeral=True)
     except: pass
 
+# ===== دود =====
 @bot.hybrid_command(name="دود", description="احفر ودور دود")
 @app_commands.choices(غرفة=[app_commands.Choice(name=f"{r['emoji']} {r['name']}", value=r['id']) for r in WORM_ROOMS])
 async def worm_hunt(ctx, غرفة: int = 0):
@@ -106,89 +149,163 @@ async def worm_hunt(ctx, غرفة: int = 0):
     user_data, all_data = get_user(ctx.author.id)
     user_data["name"] = ctx.author.display_name
     vip = get_vip_info(ctx.author.display_name)
-
     if random.random() > room["chance"]:
         embed = discord.Embed(title=f"{room['emoji']} {room['name']}", description=f"{room['desc']}\n\n❌ **ما لقيت ولا دودة!**", color=room["color"])
         if vip: embed.set_author(name=f"{ctx.author.display_name} {vip['title']}")
         await ctx.send(embed=embed); save_data(all_data); return
-
     amount = random.randint(1, room["worms"])
     worm_type = random.choices(WORM_TYPES, weights=[70,20,10])[0]
     total = amount * worm_type["value"]
-    # ابو عيسى باخد دبل ذهب 😎
-    if vip and "المؤسس" in vip["title"]:
-        total *= 2
-        amount *= 2
-
+    if vip and "المؤسس" in vip["title"]: total *= 2; amount *= 2
     user_data["worms"] += total; user_data["xp"] += total*2; user_data["gold"] += total
     if user_data["xp"] >= user_data["level"]*100: user_data["level"] += 1
     save_data(all_data)
-
     color = vip["color"] if vip else room["color"]
-    title_vip = f" {vip['title']}" if vip else ""
-    embed = discord.Embed(title=f"{room['emoji']} {room['name']} - لقيت دود!{title_vip}", description=f"{room['desc']}\n\n{worm_type['emoji']} **{worm_type['name']}** x{amount}\n💰 +{total} ذهب{' (دبل للمؤسس 👑)' if vip and 'المؤسس' in vip['title'] else ''}\n🪱 مجموع الدود: {user_data['worms']}\n⭐ لفل: {user_data['level']} | XP: {user_data['xp']}", color=color)
-    embed.set_footer(text=f"محفوظ في Upstash Frankfurt ♾️ | {ctx.author.display_name} {vip['title'] if vip else ''}")
-    if vip: embed.set_author(name=f"{ctx.author.display_name} {vip['title']}")
+    embed = discord.Embed(title=f"{room['emoji']} {room['name']} - لقيت دود! {vip['title'] if vip else ''}", description=f"{room['desc']}\n\n{worm_type['emoji']} **{worm_type['name']}** x{amount}\n💰 +{total} ذهب{' (دبل 👑)' if vip and 'المؤسس' in vip['title'] else ''}\n🪱 مجموع: {user_data['worms']} | ⭐ لفل {user_data['level']} | XP {user_data['xp']}", color=color)
+    embed.set_footer(text=f"Upstash Frankfurt ♾️ | {ctx.author.display_name}")
     await ctx.send(embed=embed)
 
 @bot.hybrid_command(name="احصائيات", description="شوف احصائياتك")
 async def stats(ctx):
     user_data,_ = get_user(ctx.author.id)
     vip = get_vip_info(ctx.author.display_name)
-    color = vip["color"] if vip else 0xFFD700
-    title = f"📊 احصائيات {ctx.author.display_name} {vip['title'] if vip else ''}"
-    embed = discord.Embed(title=title, color=color)
+    embed = discord.Embed(title=f"📊 {ctx.author.display_name} {vip['title'] if vip else ''}", color=vip["color"] if vip else 0xFFD700)
     embed.add_field(name="🪱 دود", value=str(user_data.get("worms",0)), inline=True)
     embed.add_field(name="💰 ذهب", value=str(user_data.get("gold",0)), inline=True)
     embed.add_field(name="⭐ لفل", value=str(user_data.get("level",1)), inline=True)
     embed.add_field(name="✨ XP", value=str(user_data.get("xp",0)), inline=True)
     if vip: embed.add_field(name="👑 الرتبة", value=vip["title"], inline=False)
-    embed.set_footer(text="محفوظ للأبد في Upstash ♾️ | ابو عيسى VIP")
-    if vip: embed.set_author(name=f"{ctx.author.display_name} {vip['title']}")
     await ctx.send(embed=embed)
 
-@bot.hybrid_command(name="توب", description="توب 10 اكثر ناس جمعو دود")
+@bot.hybrid_command(name="توب", description="توب 10 صيادين الدود")
 async def top_worms(ctx):
     await ctx.defer()
     data = load_data()
     if not data: await ctx.send("❌ لسه ما حدا جمع دود!"); return
     sorted_users = sorted(data.items(), key=lambda x: x[1].get("worms",0), reverse=True)[:10]
-    embed = discord.Embed(title="🏆 توب 10 صيادين الدود BSF 👑🪱", description="اكثر ناس جمعو دود", color=0xFFD700)
+    embed = discord.Embed(title="🏆 توب 10 BSF 🪱", color=0xFFD700)
     medals=["🥇","🥈","🥉"]; text=""
     for i,(uid,udata) in enumerate(sorted_users):
-        name=udata.get("name",f"User {uid[:4]}")
-        worms=udata.get("worms",0); level=udata.get("level",1)
-        vip = get_vip_info(name)
-        vip_tag = f" {vip['title']}" if vip else ""
-        medal=medals[i] if i<3 else f"**{i+1}**."; text+=f"{medal} **{name}**{vip_tag} - 🪱 {worms} | ⭐ لفل {level}\n"
-    embed.add_field(name="الترتيب", value=text or "لا يوجد", inline=False)
-    embed.set_footer(text=f"مجموع اللاعبين: {len(data)} | Upstash Frankfurt ♾️ | ابو عيسى 👑")
+        name=udata.get("name",f"User {uid[:4]}"); worms=udata.get("worms",0); level=udata.get("level",1)
+        vip = get_vip_info(name); vip_tag = f" {vip['title']}" if vip else ""
+        medal=medals[i] if i<3 else f"**{i+1}**."; text+=f"{medal} **{name}**{vip_tag} - 🪱 {worms} | لفل {level}\n"
+    embed.add_field(name="الترتيب", value=text, inline=False)
     await ctx.send(embed=embed)
 
 @bot.hybrid_command(name="ليدربورد", description="نفس التوب")
 async def leaderboard(ctx): await top_worms(ctx)
 
-@bot.hybrid_command(name="اوامر", description="كل اوامر لعبة BSF")
+# ===== ذكاء اصطناعي =====
+@bot.hybrid_command(name="اسال", description="اسال موسى AI")
+@app_commands.describe(سؤال="شو بدك تسال؟")
+async def ask_cmd(ctx, سؤال: str):
+    await ctx.defer()
+    answer = ask_musa_ai(سؤال)
+    embed = discord.Embed(title=f"🤖 موسى: {سؤال}", description=answer, color=0x00FF00)
+    embed.set_footer(text=f"سأل: {ctx.author.display_name} | BSF AI")
+    await ctx.send(embed=embed)
+
+@bot.hybrid_command(name="موسى", description="احكي مع موسى")
+@app_commands.describe(سؤال="سؤالك")
+async def musa_cmd(ctx, سؤال: str): await ask_cmd(ctx, سؤال)
+
+@bot.hybrid_command(name="اسال_موسى", description="اسال موسى AI")
+@app_commands.describe(سؤال="سؤالك")
+async def ask_musa2(ctx, سؤال: str): await ask_cmd(ctx, سؤال)
+
+# ===== اغاني - رجعت! =====
+@bot.hybrid_command(name="شغل", description="شغل اغنية - اكتب اسم الاغنية")
+@app_commands.describe(اغنية="اسم الاغنية او رابط يوتيوب")
+async def play_song(ctx, اغنية: str):
+    await ctx.defer()
+    result = await search_youtube(اغنية)
+    q = get_queue(ctx.guild.id)
+    q.append(result)
+    embed = discord.Embed(title=f"🎵 {result['title']}", description=f"🔍 بحثت عن: **{اغنية}**\n\n🔗 {result['url']}\n\n{'✅ انضافت للقائمة - موقع: '+str(len(q)) if len(q)>1 else '▶️ جاهزة للتشغيل'}", color=0xFF0000)
+    if result.get('thumbnail'): embed.set_thumbnail(url=result['thumbnail'])
+    embed.set_footer(text=f"طلب: {ctx.author.display_name} | /قائمة_الاغاني لتشوف القائمة")
+    await ctx.send(embed=embed)
+    # لو البوت في فويس، شغل
+    if ctx.author.voice and ctx.author.voice.channel:
+        if not ctx.guild.voice_client:
+            try: await ctx.author.voice.channel.connect()
+            except: pass
+
+@bot.hybrid_command(name="اغنية", description="شغل اغنية")
+@app_commands.describe(اغنية="اسم الاغنية")
+async def song_cmd(ctx, اغنية: str): await play_song(ctx, اغنية)
+
+@bot.hybrid_command(name="اغاني", description="بحث اغاني وقائمة")
+async def songs_list(ctx):
+    q = get_queue(ctx.guild.id)
+    if not q:
+        embed = discord.Embed(title="🎵 قائمة الاغاني فاضية", description="اكتب `/شغل اسم الاغنية` عشان تضيف\nمثال: `/شغل عمرو دياب - تملي معاك`", color=0xFF0000)
+        await ctx.send(embed=embed); return
+    text = ""
+    for i, s in enumerate(q[:10], 1):
+        text += f"**{i}.** {s['title']} - {s['url']}\n"
+    embed = discord.Embed(title=f"🎵 قائمة الاغاني - {len(q)} اغنية", description=text, color=0xFF0000)
+    await ctx.send(embed=embed)
+
+@bot.hybrid_command(name="قائمة_الاغاني", description="شوف قائمة الاغاني")
+async def queue_list(ctx): await songs_list(ctx)
+
+@bot.hybrid_command(name="وقف", description="وقف الاغاني وامسح القائمة")
+async def stop_music(ctx):
+    q = get_queue(ctx.guild.id)
+    q.clear()
+    if ctx.guild.voice_client:
+        try: await ctx.guild.voice_client.disconnect()
+        except: pass
+    await ctx.send("⏹️ وقفت الاغاني ومسحت القائمة 🎵")
+
+@bot.hybrid_command(name="سكب", description="سكب اغنية")
+async def skip_song(ctx):
+    q = get_queue(ctx.guild.id)
+    if q: q.pop(0)
+    if not q:
+        await ctx.send("❌ ما في اغاني في القائمة - اكتب `/شغل`")
+    else:
+        embed = discord.Embed(title=f"⏭️ سكبت - هلا شغال: {q[0]['title']}", description=q[0]['url'], color=0xFF0000)
+        await ctx.send(embed=embed)
+
+@bot.hybrid_command(name="اوامر", description="كل اوامر البوت - دود + AI + اغاني")
 async def awamer(ctx):
-    embed = discord.Embed(title="🔥【BSF】🔥 - دليل لعبة الدود الكامل 🪱♾️", description="""
-**البوت مربوط على Upstash Frankfurt 🇩🇪 - كل شي محفوظ للأبد ♾️**
+    embed = discord.Embed(title="🔥 BSF BOT الكامل - 3 في 1 🔥", description="""
+**♾️ محفوظ في Upstash Frankfurt**
 
-🎮 **/دود [الغرفة]** - احفر ودور دود
-📊 **/احصائيات** - شوف دودك وذهبك ولفلك
-🏆 **/توب** - توب 10 صيادين الدود
-📜 **/اوامر** - هاد الدليل
+**▬▬ 🎮 الدود ▬▬**
+🪱 **/دود [الغرفة]** - احفر ودور
+📊 **/احصائيات** - رصيدك
+🏆 **/توب** / **/ليدربورد** - توب 10
 
-🗺️ **الغرف:** 🕳️ 85% | 🌀 70% | 🍝 60% | 📦 45% | 🧊 30% | 👑 15%
-✨ **الدود:** 🪱 1 ذهب | ✨ 3 ذهب | 👑 10 ذهب
-⭐ كل دودة = 2 XP | كل 100 XP = لفل
+**▬▬ 🤖 موسى AI ▬▬**
+💬 **/اسال [سؤال]** - اسال موسى
+🤖 **/موسى [سؤال]** - احكي مع موسى
+🧠 **/اسال_موسى [سؤال]**
 
-👑 **ابو عيسى** - المؤسس - دبل ذهب ودود! ♾️
+**▬▬ 🎵 الاغاني - رجعت! ▬▬**
+▶️ **/شغل [اسم الاغنية]** - شغل اغنية
+🎵 **/اغنية [الاسم]** - نفسها
+📜 **/اغاني** - قائمة الاغاني
+📃 **/قائمة_الاغاني** - القائمة
+⏭️ **/سكب** - سكب الاغنية
+⏹️ **/وقف** - وقف ومسح القائمة
+
+مثال اغاني:
+`/شغل تملي معاك عمرو دياب`
+`/شغل شيرين - حبه جنة`
+`/شغل BSF اغنية`
+
+**▬▬**
+👑 **ابو عيسى المؤسس** - دبل ذهب
 ⚙️ **موشي & موسى** - المطورين
-🔥 **عجيب** - BSF
 
-صيد موفق يا بطل BSF! 🪱🔥
+/دود للبدء 🪱
+/شغل للاغاني 🎵
+/اسال للذكاء 🤖
 """, color=0xFFD700)
-    embed.set_footer(text="BSF BOT | Upstash Frankfurt ♾️ | ابو عيسى المؤسس 👑")
+    embed.set_footer(text="BSF BOT | دود + AI + اغاني | Upstash ♾️")
     await ctx.send(embed=embed)
 
 keep_alive()
