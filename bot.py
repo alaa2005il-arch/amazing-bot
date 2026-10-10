@@ -1,88 +1,78 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
-import random
-import json
 import os
+import sys
+from flask import Flask
+from threading import Thread
 
-# --- تخزين البيانات ---
-DATA_FILE = "bsf_data.json"
+# --- Flask للـ Render ---
+app = Flask('')
 
-def load_data():
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            return {}
-    return {}
+@app.route('/')
+def home():
+    return "BSF Bot is Live! 🐛"
 
-def save_data(data):
-    with open(DATA_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+def run_flask():
+    port = int(os.environ.get("PORT", 10000))
+    print(f"🌐 Flask starting on 0.0.0.0:{port}", flush=True)
+    app.run(host='0.0.0.0', port=port)
 
-# --- خريطة الدودة BSF WORM WORLD MAP ---
-ROOMS = [
-    {"id": 0, "name": "Fungal Grotto 🍄", "desc": "البداية - كهف الفطر المضيء، هون بتبلش رحلة الزعامة", "emoji": "🍄"},
-    {"id": 1, "name": "Mossy Burrow 🌿", "desc": "جحر الطحالب الرطب، ريحة تراب ودود صغير", "emoji": "🌿"},
-    {"id": 2, "name": "Crystal Cavern 💎", "desc": "كهف الكريستال - النص، الكريستال بيلمع والطريق بخوف", "emoji": "💎"},
-    {"id": 3, "name": "Egg Chamber 🥚", "desc": "غرفة بيض الدودة الأم، لا تصحيها!", "emoji": "🥚"},
-    {"id": 4, "name": "Treasure Nook 👑", "desc": "النهاية - كنز BSF! تاج الزعامة بستناك", "emoji": "👑"},
-]
+def keep_alive():
+    t = Thread(target=run_flask)
+    t.daemon = True
+    t.start()
 
-PHRASES = [
-    "BSF زعامة للأبد 🔥",
-    "عجيب وابو عيسى الزعماء الحقيقيين 👑",
-    "جمعت قلب جديد! ❤️",
-    "اهرب من الغسالة! 🌀",
-]
-
-RANDOM_EVENTS = [
-    {"type": "double", "msg": "يا وحش! لقيت دودتين 🐛🐛 بدل وحدة!", "worms": 2},
-    {"type": "poison", "msg": "أووبس! أكلت فطر سام 🍄 رجعتك غرفة لورا!", "worms": 0, "back": True},
-    {"type": "lore", "msg": "📜 رسالة غامضة من الدودة الأم: 'الزعيم الحقيقي لا يخاف الظلام...'", "worms": 1},
-]
-
-# --- View بالأزرار لمغامرة الدودة ---
-class WormView(discord.ui.View):
+# --- Bot ---
+class BSF_Bot(commands.Bot):
     def __init__(self):
-        super().__init__(timeout=300) # 5 دقايق
+        intents = discord.Intents.default()
+        intents.message_content = True
+        intents.members = True
+        super().__init__(command_prefix="!", intents=intents)
 
-    def get_embed(self, user: discord.Member, user_data: dict):
-        room_id = user_data.get("worm_room", 0)
-        worms = user_data.get("worms", 0)
-        room = ROOMS[room_id]
+    async def setup_hook(self):
+        print("🔄 Loading cogs...", flush=True)
+        try:
+            await self.load_extension("game")
+            print("✅ game.py loaded!", flush=True)
+        except Exception as e:
+            print(f"❌ Failed to load game.py: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
 
-        progress = "—" * 5
-        progress_list = list(progress)
-        for i in range(room_id + 1):
-            progress_list[i] = "●"
-        progress_bar = "".join(progress_list)
+        try:
+            synced = await self.tree.sync()
+            print(f"✅ Synced {len(synced)} commands", flush=True)
+        except Exception as e:
+            print(f"❌ Sync failed: {e}", flush=True)
 
-        embed = discord.Embed(
-            title=f"{room['emoji']} {room['name']}",
-            description=f"{room['desc']}\n\n`{progress_bar}` {room_id+1}/5",
-            color=discord.Color.green() if room_id < 4 else discord.Color.gold()
-        )
-        embed.add_field(name="🐛 دوداتك", value=f"**{worms}** دودة", inline=True)
-        embed.add_field(name="📍 الموقع", value=room['name'], inline=True)
-        embed.set_author(name=f"مغامرة {user.display_name}", icon_url=user.display_avatar.url)
-        embed.set_footer(text="BSF WORM WORLD MAP - اضغط استكشاف للمتابعة")
-        # لما تبعتلي الصور، بتحط هون: embed.set_image(url=...)
-        return embed
+bot = BSF_Bot()
 
-    @discord.ui.button(label="استكشاف ⬆️", style=discord.ButtonStyle.green, emoji="🐛")
-    async def explore(self, interaction: discord.Interaction, button: discord.ui.Button):
-        data = load_data()
-        user_id = str(interaction.user.id)
+@bot.event
+async def on_ready():
+    print(f"✅ BSF LIVE as {bot.user}", flush=True)
 
-        if user_id not in data:
-            data[user_id] = {"hearts": 0, "name": interaction.user.name, "worm_room": 0, "worms": 0}
+# شغل الفلاسك أول شي
+keep_alive()
 
-        # تأكد من وجود حقول الدودة
-        data[user_id].setdefault("worm_room", 0)
-        data[user_id].setdefault("worms", 0)
+# جيب التوكن
+TOKEN = os.getenv("TOKEN") or os.getenv("DISCORD_TOKEN") or os.getenv("DISCORD_BOT_TOKEN") or os.getenv("BOT_TOKEN")
 
-        room_id = data[user_id]["worm_room"]
-
-        # اذا فايز من قبل و
+if not TOKEN:
+    print("❌ NO TOKEN FOUND! Bot will not start but Flask will stay alive to keep Render happy", flush=True)
+    # خلي الفلاسك شغال عشان رندر ما يعطي Failed
+    import time
+    while True:
+        time.sleep(3600)
+else:
+    print("🚀 Starting Discord bot...", flush=True)
+    try:
+        bot.run(TOKEN)
+    except Exception as e:
+        print(f"❌ Bot crashed: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        # حتى لو البوت وقع، خلي الفلاسك شغال
+        import time
+        while True:
+            time.sleep(3600)
