@@ -5,3 +5,4 @@ yt-dlp
 PyNaCl
 aiohttp
 openai
+upstash-redis
