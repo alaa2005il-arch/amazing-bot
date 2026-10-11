@@ -3,91 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>بهاراتك يا موشي - لعبة التلفون</title>
+<title>BSF - بهاراتك يا موشي - معلقات تكريس ذاتي!</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:system-ui,sans-serif;background:#0f172a;color:white;overflow:hidden;height:100vh;display:flex;flex-direction:column}
-header{background:#1e293b;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #f59e0b}
-h1{font-size:20px;color:#fbbf24}
-#score{font-size:18px;background:#f59e0b;color:#000;padding:4px 12px;border-radius:20px;font-weight:bold}
-#game{flex:1;position:relative;background:radial-gradient(circle at center,#1e293b,#0f172a);overflow:hidden;touch-action:none}
-.baharat{position:absolute;width:60px;height:60px;font-size:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;animation:float 2s ease-in-out infinite;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5))}
+header{background:#1e293b;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #f59e0b}
+h1{font-size:16px;color:#fbbf24}
+.stats{display:flex;gap:6px;align-items:center}
+.stat{font-size:13px;padding:4px 9px;border-radius:20px;font-weight:bold}
+#score{background:#f59e0b;color:#000}
+#lives{background:#ef4444;color:white}
+#bsf{background:#1e40af;color:#93c5fd;border:1px solid #60a5fa}
+#game{flex:1;position:relative;background:radial-gradient(circle at center,#1e293b 0%,#0f172a 70%);overflow:hidden;touch-action:none}
+.item{position:absolute;width:62px;height:62px;font-size:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.6))}
+.good{animation:float 2s ease-in-out infinite}
+.bad{animation:shake 0.4s infinite alternate;filter:drop-shadow(0 0 12px rgba(239,68,68,0.9))}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-@keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.5)}100%{transform:scale(0);opacity:0}}
-.pop{animation:pop 0.3s forwards}
-#controls{padding:12px;background:#1e293b;display:flex;gap:8px;justify-content:center}
-.btn{flex:1;padding:14px;background:#f59e0b;color:#000;border:none;border-radius:12px;font-weight:800;font-size:16px}
-.btn:active{transform:scale(0.96)}
-#msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.9);padding:24px;border-radius:20px;text-align:center;display:none;z-index:10;min-width:260px;border:2px solid #f59e0b}
-#msg.show{display:block}
-#msg h2{color:#fbbf24;margin-bottom:8px}
-</style>
-</head>
-<body>
-<header>
-<h1>🧂 بهاراتك يا موشي!</h1>
-<div id="score">0 🪙</div>
-</header>
-<div id="game">
-<div id="msg"><h2 id="msgTitle"></h2><p id="msgText"></p><button class="btn" style="margin-top:12px" onclick="startGame()">العب تاني 🔥</button></div>
-</div>
-<div id="controls">
-<button class="btn" onclick="startGame()">ابدأ ▶️</button>
-<button class="btn" style="background:#334155;color:white" onclick="shareGame()">شارك 📤</button>
-</div>
-<script>
-let score=0,gameActive=false,spawnInterval,timeLeft=30,timer
-const emojis=['🧂','🌶️','🫚','🧄','🌿','✨','💎','🪱']
-const game=document.getElementById('game'),scoreEl=document.getElementById('score')
-const msg=document.getElementById('msg'),msgTitle=document.getElementById('msgTitle'),msgText=document.getElementById('msgText')
-function randomPos(){
- const rect=game.getBoundingClientRect()
- return {x:Math.random()*(rect.width-70)+10,y:Math.random()*(rect.height-80)+20}
-}
-function spawn(){
- if(!gameActive) return
- const el=document.createElement('div')
- el.className='baharat'
- el.textContent=emojis[Math.floor(Math.random()*emojis.length)]
- const pos=randomPos()
- el.style.left=pos.x+'px'
- el.style.top=pos.y+'px'
- el.onclick=()=>{
-   if(!gameActive) return
-   score+=10
-   scoreEl.textContent=score+' 🪙'
-   el.classList.add('pop')
-   setTimeout(()=>el.remove(),300)
-   if(navigator.vibrate) navigator.vibrate(30)
- }
- game.appendChild(el)
- setTimeout(()=>{if(el.parentNode) el.remove()},2000)
-}
-function startGame(){
- score=0;timeLeft=30;gameActive=true
- scoreEl.textContent='0 🪙'
- msg.classList.remove('show')
- game.querySelectorAll('.baharat').forEach(e=>e.remove())
- clearInterval(spawnInterval);clearInterval(timer)
- spawnInterval=setInterval(spawn,600)
- timer=setInterval(()=>{
-   timeLeft--
-   if(timeLeft<=0) endGame()
- },1000)
-}
-function endGame(){
- gameActive=false
- clearInterval(spawnInterval);clearInterval(timer)
- game.querySelectorAll('.baharat').forEach(e=>e.remove())
- msgTitle.textContent=timeLeft<=0?'خلص الوقت! ⏰':'بهارتك يا موشي! 🧂'
- msgText.textContent='جمعت '+score+' بهارة! '+(score>200?'أسطورة BSF! 👑':score>100?'زعامة عجيب! 🔥':'يلا حاول تاني 💪')
- msg.classList.add('show')
-}
-function shareGame(){
- if(navigator.share){navigator.share({title:'بهاراتك يا موشي',text:'العب معي! جمعت '+score+' بهارة',url:location.href})}
- else{alert('انسخ الرابط: '+location.href)}
-}
-setTimeout(startGame,500)
-</script>
-</body>
-</html>
+@keyframes shake{0%{transform:rotate(-6deg)}100%{transform:rotate(6deg)}}
+@keyframes fall{0%{transform:translateY(-100px)}100%{transform:translateY(110vh)}}
+.bsf-wrap{position:absolute;top:-20px;display:flex;flex-direction:column;align-items:center;cursor:pointer;z-index:4;animation:sway 1.2s ease-in-out infinite alternate}
+@keyframes sway{0%{transform:rotate(-4deg)}100%{transform:rotate(4deg)}}
+.thread{width:2px;height:28px;background:linear-gradient(to bottom,#fbbf24,#92400e);box-shadow:0 0 4px #fbbf24}
+.bsf-letter{width:52px;height:52px;background:radial-gradient(circle at 30% 30%,#fde047,#f59e0b);border:2px solid #fff;color:#000;font-weight:900;font-size:28px;display:flex;align-items:center;justify-content:center;border-radius:12px;box-shadow:0 4px 15px rgba(251,191,36,0.8), inset 0 -3px 0 rgba(0,0,0,0.3)}
+.bsf-letter.B{background:radial-gradient(circle at 30% 30%,#93c5fd,#1e40af);color:white}
+.bsf-letter.S{background:radial-gradient(circle at 30% 30%,#86efac,#15803d);color:white}
+.bsf-letter.F{background:radial-gradient(circle at 30% 30%,#fca5a5,#b91c1c);color:white}
+.falling{animation:fall linear forwards}
+@keyframes popGood{0%{transform:scale(1)}50%{transform:scale(1.6)}100%{transform:scale(0);opacity:0}}
+@keyframes popBad{0%{transform:scale(1)}30%
