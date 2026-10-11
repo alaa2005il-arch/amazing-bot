@@ -2,32 +2,50 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>BSF - بهاراتك يا موشي - معلقات تكريس ذاتي!</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>بهاراتك يا موشي</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:system-ui,sans-serif;background:#0f172a;color:white;overflow:hidden;height:100vh;display:flex;flex-direction:column}
-header{background:#1e293b;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #f59e0b}
-h1{font-size:16px;color:#fbbf24}
-.stats{display:flex;gap:6px;align-items:center}
-.stat{font-size:13px;padding:4px 9px;border-radius:20px;font-weight:bold}
-#score{background:#f59e0b;color:#000}
-#lives{background:#ef4444;color:white}
-#bsf{background:#1e40af;color:#93c5fd;border:1px solid #60a5fa}
-#game{flex:1;position:relative;background:radial-gradient(circle at center,#1e293b 0%,#0f172a 70%);overflow:hidden;touch-action:none}
-.item{position:absolute;width:62px;height:62px;font-size:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.6))}
-.good{animation:float 2s ease-in-out infinite}
-.bad{animation:shake 0.4s infinite alternate;filter:drop-shadow(0 0 12px rgba(239,68,68,0.9))}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-@keyframes shake{0%{transform:rotate(-6deg)}100%{transform:rotate(6deg)}}
-@keyframes fall{0%{transform:translateY(-100px)}100%{transform:translateY(110vh)}}
-.bsf-wrap{position:absolute;top:-20px;display:flex;flex-direction:column;align-items:center;cursor:pointer;z-index:4;animation:sway 1.2s ease-in-out infinite alternate}
-@keyframes sway{0%{transform:rotate(-4deg)}100%{transform:rotate(4deg)}}
-.thread{width:2px;height:28px;background:linear-gradient(to bottom,#fbbf24,#92400e);box-shadow:0 0 4px #fbbf24}
-.bsf-letter{width:52px;height:52px;background:radial-gradient(circle at 30% 30%,#fde047,#f59e0b);border:2px solid #fff;color:#000;font-weight:900;font-size:28px;display:flex;align-items:center;justify-content:center;border-radius:12px;box-shadow:0 4px 15px rgba(251,191,36,0.8), inset 0 -3px 0 rgba(0,0,0,0.3)}
-.bsf-letter.B{background:radial-gradient(circle at 30% 30%,#93c5fd,#1e40af);color:white}
-.bsf-letter.S{background:radial-gradient(circle at 30% 30%,#86efac,#15803d);color:white}
-.bsf-letter.F{background:radial-gradient(circle at 30% 30%,#fca5a5,#b91c1c);color:white}
-.falling{animation:fall linear forwards}
-@keyframes popGood{0%{transform:scale(1)}50%{transform:scale(1.6)}100%{transform:scale(0);opacity:0}}
-@keyframes popBad{0%{transform:scale(1)}30%
+body{margin:0;background:#0f172a;color:#fff;font-family:sans-serif;text-align:center;overflow:hidden}
+#top{background:#1e293b;padding:12px;display:flex;justify-content:space-between;border-bottom:3px solid #f59e0b}
+#score{background:#f59e0b;color:#000;padding:6px 14px;border-radius:20px;font-weight:bold}
+#game{position:relative;width:100vw;height:75vh;background:#1e293b}
+.obj{position:absolute;font-size:40px;cursor:pointer;user-select:none}
+.bsf{position:absolute;top:0;font-size:26px;font-weight:900;width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="top"><b>🧂 BSF بهاراتك يا موشي!</b><div><span id="bsf">BSF:--</span> <span id="score">0</span></div></div>
+<div id="game"></div>
+<div style="padding:10px"><button onclick="start()" style="padding:12px 24px;background:#f59e0b;border:0;border-radius:10px;font-weight:bold">ابدأ ▶️</button></div>
+<script>
+let s=0,l=3,bsf={B:0,S:0,F:0},run=false,iv1,iv2;
+const g=document.getElementById('game');
+function upd(){document.getElementById('score').textContent=s+' 🪙 ❤️'+l; document.getElementById('bsf').textContent='BSF:'+(bsf.B?'B':'-')+(bsf.S?'S':'-')+(bsf.F?'F':'-'); if(bsf.B&&bsf.S&&bsf.F){s+=100;l++;bsf={B:0,S:0,F:0};alert('🎁 تكريس ذاتي! BSF كامل +100!');upd();}}
+function add(t,x,y,isBad){
+ const d=document.createElement('div'); d.className='obj'; d.textContent=t; d.style.left=x+'px'; d.style.top=y+'px';
+ d.onclick=()=>{if(!run)return; if(isBad){s=Math.max(0,s-20);l--;if(l<=0){alert('تسممت! سكورك:'+s);run=false;}}else{s+=10;} d.remove(); upd();};
+ g.appendChild(d); setTimeout(()=>d.remove&&d.remove(),2000);
+}
+function addBSF(){
+ if(!run)return;
+ const letters=['B','S','F']; const L=letters[Math.floor(Math.random()*3)]; if(bsf[L])return;
+ const d=document.createElement('div'); d.className='bsf'; d.textContent=L; d.style.left=(Math.random()*80+10)+'%'; d.style.background=L=='B'?'#3b82f6':L=='S'?'#22c55e':'#ef4444'; d.style.color='white';
+ d.style.top='0px';
+ let top=0; let fall=setInterval(()=>{top+=4; d.style.top=top+'px'; if(top>window.innerHeight){clearInterval(fall); d.remove();}},30);
+ d.onclick=()=>{bsf[L]=1; s+=25; clearInterval(fall); d.remove(); upd();};
+ g.appendChild(d);
+}
+function start(){
+ s=0;l=3;bsf={B:0,S:0,F:0};run=true;g.innerHTML='';upd();
+ clearInterval(iv1);clearInterval(iv2);
+ iv1=setInterval(()=>{
+  const bad=Math.random()<0.3;
+  const em=bad? ['💣','💩','🪳'][Math.floor(Math.random()*3)] : ['🧂','🌶️','🫚','🧄'][Math.floor(Math.random()*4)];
+  add(em, Math.random()*(window.innerWidth-60), Math.random()*(window.innerHeight*0.7), bad);
+ },600);
+ iv2=setInterval(addBSF,1500);
+}
+start();
+</script>
+</body>
+</html>
