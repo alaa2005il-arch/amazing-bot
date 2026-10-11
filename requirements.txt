@@ -6,3 +6,4 @@ PyNaCl
 aiohttp
 openai
 upstash-redis
+redis>=4.5.0
