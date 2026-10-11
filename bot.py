@@ -8,47 +8,36 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "✅ البوت الخارق شغال - دود + بهارات - بهارتك يا موشي! 🧂🪱"
+    return "✅ دود + بهارات - بهارتك يا موشي شغال!"
 
 @app.route('/baharat')
 def baharat_game():
-    # لعبة التلفون - بتشتغل على اي تلفون وبتقدر تبعتها بلوتوث ك APK
     try:
         return send_file('baharat_game.html')
-    except:
-        return """
-        <h1>حط ملف baharat_game.html في نفس مجلد البوت على GitHub</h1>
-        <p>حمله من الرابط اللي بعتلك ياه</p>
-        """
+    except Exception as e:
+        return f"خطأ: {e} - تأكد ان الملف موجود", 500
 
-def run_web():
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host='0.0.0.0', port=port)
-
-threading.Thread(target=run_web, daemon=True).start()
-
+# --- Discord Bot ---
 intents = discord.Intents.default()
 intents.message_content = True
-
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
-    print(f"✅ البوت شغال: {bot.user}")
-    try:
-        await bot.load_extension("game")
-        print("✅ لعبة الدود شغالة")
-        await bot.load_extension("baharat")
-        print("✅ لعبة بهاراتك شغالة")
-        synced = await bot.tree.sync()
-        print(f"✅ تم مزامنة {len(synced)} أمر")
-        print(f"✅ البوت الخارق جاهز - دود + بهارات - بهارتك يا موشي!")
-        print(f"✅ لعبة التلفون: /baharat")
-    except Exception as e:
-        print(f"❌ خطأ تحميل اللعبة: {e}")
+    print(f"Logged in as {bot.user}")
 
-TOKEN = os.getenv("DISCORD_TOKEN")
-if not TOKEN:
-    print("❌ ما لقيت DISCORD_TOKEN")
-else:
-    bot.run(TOKEN)
+@bot.command()
+async def بهارت(ctx):
+    await ctx.send("بهارتك يا موشي! 🧂 العب: https://amazing-bot-k92g.onrender.com/baharat")
+
+def run_flask():
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
+
+if __name__ == "__main__":
+    threading.Thread(target=run_flask, daemon=True).start()
+    token = os.environ.get("DISCORD_TOKEN")
+    if token:
+        bot.run(token)
+    else:
+        app.run(host="0.0.0.0", port=10000)
