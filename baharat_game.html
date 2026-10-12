@@ -1,51 +1,29 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>بهاراتك يا موشي</title>
-<style>
-body{margin:0;background:#0f172a;color:#fff;font-family:sans-serif;text-align:center;overflow:hidden}
-#top{background:#1e293b;padding:12px;display:flex;justify-content:space-between;border-bottom:3px solid #f59e0b}
-#score{background:#f59e0b;color:#000;padding:6px 14px;border-radius:20px;font-weight:bold}
-#game{position:relative;width:100vw;height:75vh;background:#1e293b}
-.obj{position:absolute;font-size:40px;cursor:pointer;user-select:none}
-.bsf{position:absolute;top:0;font-size:26px;font-weight:900;width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;cursor:pointer}
-</style>
-</head>
-<body>
-<div id="top"><b>🧂 BSF بهاراتك يا موشي!</b><div><span id="bsf">BSF:--</span> <span id="score">0</span></div></div>
-<div id="game"></div>
-<div style="padding:10px"><button onclick="start()" style="padding:12px 24px;background:#f59e0b;border:0;border-radius:10px;font-weight:bold">ابدأ ▶️</button></div>
-<script>
-let s=0,l=3,bsf={B:0,S:0,F:0},run=false,iv1,iv2;
-const g=document.getElementById('game');
-function upd(){document.getElementById('score').textContent=s+' 🪙 ❤️'+l; document.getElementById('bsf').textContent='BSF:'+(bsf.B?'B':'-')+(bsf.S?'S':'-')+(bsf.F?'F':'-'); if(bsf.B&&bsf.S&&bsf.F){s+=100;l++;bsf={B:0,S:0,F:0};alert('🎁 تكريس ذاتي! BSF كامل +100!');upd();}}
-function add(t,x,y,isBad){
- const d=document.createElement('div'); d.className='obj'; d.textContent=t; d.style.left=x+'px'; d.style.top=y+'px';
- d.onclick=()=>{if(!run)return; if(isBad){s=Math.max(0,s-20);l--;if(l<=0){alert('تسممت! سكورك:'+s);run=false;}}else{s+=10;} d.remove(); upd();};
- g.appendChild(d); setTimeout(()=>d.remove&&d.remove(),2000);
-}
-function addBSF(){
- if(!run)return;
- const letters=['B','S','F']; const L=letters[Math.floor(Math.random()*3)]; if(bsf[L])return;
- const d=document.createElement('div'); d.className='bsf'; d.textContent=L; d.style.left=(Math.random()*80+10)+'%'; d.style.background=L=='B'?'#3b82f6':L=='S'?'#22c55e':'#ef4444'; d.style.color='white';
- d.style.top='0px';
- let top=0; let fall=setInterval(()=>{top+=4; d.style.top=top+'px'; if(top>window.innerHeight){clearInterval(fall); d.remove();}},30);
- d.onclick=()=>{bsf[L]=1; s+=25; clearInterval(fall); d.remove(); upd();};
- g.appendChild(d);
-}
-function start(){
- s=0;l=3;bsf={B:0,S:0,F:0};run=true;g.innerHTML='';upd();
- clearInterval(iv1);clearInterval(iv2);
- iv1=setInterval(()=>{
-  const bad=Math.random()<0.3;
-  const em=bad? ['💣','💩','🪳'][Math.floor(Math.random()*3)] : ['🧂','🌶️','🫚','🧄'][Math.floor(Math.random()*4)];
-  add(em, Math.random()*(window.innerWidth-60), Math.random()*(window.innerHeight*0.7), bad);
- },600);
- iv2=setInterval(addBSF,1500);
-}
-start();
-</script>
-</body>
-</html>
+بهارتي - BSF
+عجيب x موشي x موسى
+تاريخ: 12-10-2026
+
+عجيب غريب، البهار اشي رهيب، amazing!
+بهاراتك يا موشي، الطعم عجيب، amazing!
+B S F معلق بخيط دهب، amazing!
+تكريس ذاتي +100، فريقنا رهيب، amazing!
+
+الفن على موشي الحبيب، ولعها خلاها شطة ونقطة!
+BSF بتتخطى حدود البهار، صارت نار، نار وشرار!
+
+موسى دخل الشات، جاب البهار الزيادة
+ثلاثتنا BSF، اللعبة صارت قيادة!
+من بركان لشات العام، تيم ما بنهاب
+عجيب و موشي و موسى، بنكسر الأبواب!
+
+من كود للسما، 535 سكور وزيادة
+مع موسى التالت، القوة صارت عادة!
+
+يلا يلا بهاراتك يا موشي!
+يلا يلا بهاراتك يا موسى!
+يلا يلا بهاراتك يا عجيب!
+B معلق، S نازل، F طاير
+شطة ونقطة، نار وشرار!
+
+
+اللعبة: BSF:-SF 535 ❤️❤️ 4
+الفريق: عجيب x موشي x موسى
