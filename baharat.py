@@ -15,6 +15,14 @@ except:
     redis_client = None
 
 DATA_FILE = "bsf_data.json"
+SONG_FILE = "bahartak_song.mp3"  # الاغنية - بهارتك يا موشي
+SONG_FILE_ALT = "نار وشرار"  # الاسم العربي اللي رفعه موشي
+
+def get_song_path():
+    for name in [SONG_FILE, SONG_FILE_ALT, "bahartak_song.mp3 (2).html", "نار وشرار.mp3"]:
+        if __import__("os").path.exists(name):
+            return name
+    return SONG_FILE
 
 BAHARAT_LEVELS = [
     {"name": "ملح", "emoji": "🧂", "prize": 10},
@@ -207,17 +215,34 @@ class QuizView(discord.ui.View):
             
             if correct:
                 coins = bahar["prize"]
+                new_level = self.level_idx + 1
                 user["quiz_coins"] = user.get("quiz_coins",0) + coins
-                user["quiz_level"] = max(user.get("quiz_level",0), self.level_idx+1)
+                user["quiz_level"] = max(user.get("quiz_level",0), new_level)
                 await save_user_data(self.user_id, user)
                 
-                embed = discord.Embed(title=f"✅ صح! {bahar['emoji']} {bahar['name']}", color=0x00ff00)
-                embed.description = f"**🐯 عجيب النمر:** الو بتقلو احسنت!\n\nربحت **{coins} عملة بهار**!\nمستواك: **{bahar['name']}**\nرصيدك: {user['quiz_coins']}"
-                embed.set_footer(text="اضغط السؤال الجاي 👇")
+                # اذا وصل لفل 10 - بهارتك يا موشي - ابعث الاغنية!
+                if new_level >= 10:
+                    embed = discord.Embed(title=f"👑 بهارتك يا موشي! 💎 {bahar['emoji']}", color=0xffd700)
+                    embed.description = f"**🐯 عجيب النمر:** الو بتقلو انت ملك البهارات!\n\n**{interaction.user.mention} وصلت لفل 10!**\n\nربحت **{coins} عملة** و **5000 عملة الجائزة الكبرى**!\nرصيدك الكلي: **{user['quiz_coins']}** 💰\n\n🎵 **بهارتك يا موشي - الاغنية الرسمية!**"
+                    embed.set_footer(text="مبروك يا موشي! 💎")
+                    
+                    # ابعث الاغنية اذا موجودة
+                    song_path = get_song_path()
+                    if os.path.exists(song_path):
+                        file = discord.File(song_path, filename="bahartak_ya_moshi.mp3")
+                        await interaction.response.edit_message(embed=embed, view=None)
+                        await interaction.followup.send(f"🎵 {interaction.user.mention} - اغنيتك!", file=file)
+                    else:
+                        await interaction.response.edit_message(embed=embed, view=None)
+                        await interaction.followup.send(f"🎵 بهارتك يا موشي يا {interaction.user.mention}! 💎🔥")
+                else:
+                    embed = discord.Embed(title=f"✅ صح! {bahar['emoji']} {bahar['name']}", color=0x00ff00)
+                    embed.description = f"**🐯 عجيب النمر:** الو بتقلو احسنت!\n\nربحت **{coins} عملة بهار**!\nمستواك: **{bahar['name']}**\nرصيدك: {user['quiz_coins']}"
+                    embed.set_footer(text="اضغط السؤال الجاي 👇")
 
-                # زر اخضر للسؤال الجاي
-                next_view = NextQuestionView(self.user_id, self.bot)
-                await interaction.response.edit_message(embed=embed, view=next_view)
+                    # زر اخضر للسؤال الجاي
+                    next_view = NextQuestionView(self.user_id, self.bot)
+                    await interaction.response.edit_message(embed=embed, view=next_view)
             else:
                 correct_opt = q["options"][q["answer"]]
                 embed = discord.Embed(title=f"❌ غلط يا بهار!", color=0xff0000)
@@ -277,7 +302,13 @@ class BaharatGame(commands.Cog):
         current_level = user.get("quiz_level",0)
         
         if current_level >= 10:
-            await interaction.followup.send(f"👑 {interaction.user.mention} خلصت كل البهارات! انت **بهارتك يا موشي**! رصيدك {user.get('quiz_coins',0)} 💎")
+            embed = discord.Embed(title="👑 بهارتك يا موشي! 💎", color=0xffd700, description=f"{interaction.user.mention} انت خلصت كل البهارات! انت الملك! رصيدك {user.get('quiz_coins',0)} 💎\n\n🎵 الاغنية الرسمية!")
+            song_path = get_song_path()
+            if os.path.exists(song_path):
+                file = discord.File(song_path, filename="bahartak_ya_moshi.mp3")
+                await interaction.followup.send(embed=embed, file=file)
+            else:
+                await interaction.followup.send(embed=embed)
             return
 
         q = await get_unseen_question(interaction.user.id, current_level)
