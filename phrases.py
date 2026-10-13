@@ -1,6 +1,4 @@
-# BSF Bot - بهارتي + كنز متحرك + قصر هشام + أصوات - النسخة المدمجة النهائية
-# المطور: BSF Team - للصق المباشر في amazing-bot/baharat.py
-# انسخ هذا الملف كامل وضعه في GitHub Repo: amazing-bot/baharat.py
+ 
 
 import discord
 from discord.ext import commands
